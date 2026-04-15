@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>TRPG 캐릭터 기록보관소</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>👤 캐릭터 시트 기록</h1>
+        <div id="input-form">
+            <input type="text" id="char-name" placeholder="캐릭터 이름">
+            <div class="stats-grid">
+                <input type="number" id="hp" placeholder="체력">
+                <input type="number" id="stamina" placeholder="스테미나">
+                <input type="number" id="str" placeholder="힘">
+                <input type="number" id="health" placeholder="건강">
+                <input type="number" id="speed" placeholder="속도">
+                <input type="number" id="precision" placeholder="정밀">
+                <input type="number" id="intel" placeholder="지능">
+                <input type="number" id="wis" placeholder="지혜">
+                <input type="number" id="cha" placeholder="매력">
+            </div>
+            <button onclick="saveCharacter()">캐릭터 저장</button>
+        </div>
+        <hr>
+        <div id="character-list"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
