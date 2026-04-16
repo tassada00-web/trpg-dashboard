@@ -55,25 +55,30 @@ document.getElementById('excel-file').addEventListener('change', function(e) {
     reader.onload = function(e) {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, {type: 'array'});
-        const sheetName = workbook.SheetNames[0];
+        const sheetName = workbook.SheetNames[0]; // 첫 번째 시트 사용
         const sheet = workbook.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json(sheet);
 
-        rows.forEach(row => {
-            addCharacterCard({
-                name: row['이름'] || "무명",
-                hp: row['체력'] || 0,
-                sta: row['스테미나'] || 0,
-                str: row['힘'] || 0,
-                hea: row['건강'] || 0,
-                spd: row['속도'] || 0,
-                pre: row['정밀'] || 0,
-                int: row['지능'] || 0,
-                wis: row['지혜'] || 0,
-                cha: row['매력'] || 0
-            });
-        });
-        alert(`${rows.length}명의 캐릭터를 불러왔습니다!`);
+        // 셀 위치에서 직접 데이터 추출 (sheet['셀좌표'].v)
+        // 값이 없을 경우를 대비해 뒤에 || 0 또는 || "이름없음"을 붙입니다.
+        const charData = {
+            name: sheet['C4'] ? sheet['C4'].v : "무명",
+            hp:   sheet['R4'] ? sheet['R4'].v : 0,
+            sta:  sheet['R5'] ? sheet['R5'].v : 0,
+            str:  sheet['R6'] ? sheet['R6'].v : 0,
+            hea:  sheet['R7'] ? sheet['R7'].v : 0,
+            spd:  sheet['R8'] ? sheet['R8'].v : 0,
+            pre:  sheet['R9'] ? sheet['R9'].v : 0,
+            int:  sheet['R10'] ? sheet['R10'].v : 0,
+            wis:  sheet['R11'] ? sheet['R11'].v : 0,
+            cha:  sheet['R12'] ? sheet['R12'].v : 0
+            // R13, R14, R15에 데미지나 방어력이 있다면 추가 가능합니다.
+        };
+
+        addCharacterCard(charData);
+        alert(`${charData.name} 시트를 불러왔습니다!`);
+        
+        // 파일 입력창 초기화 (같은 파일을 다시 올릴 때를 대비)
+        e.target.value = '';
     };
     reader.readAsArrayBuffer(file);
 });
