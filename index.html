@@ -2,29 +2,46 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>TRPG 캐릭터 기록보관소</title>
+    <title>TRPG 캐릭터 아카이브</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1>👤 캐릭터 시트 기록</h1>
-        <div id="input-form">
-            <input type="text" id="char-name" placeholder="캐릭터 이름">
-            <div class="stats-grid">
-                <input type="number" id="hp" placeholder="체력">
-                <input type="number" id="stamina" placeholder="스테미나">
-                <input type="number" id="str" placeholder="힘">
-                <input type="number" id="health" placeholder="건강">
-                <input type="number" id="speed" placeholder="속도">
-                <input type="number" id="precision" placeholder="정밀">
-                <input type="number" id="intel" placeholder="지능">
-                <input type="number" id="wis" placeholder="지혜">
-                <input type="number" id="cha" placeholder="매력">
+        <header>
+            <h1 class="cinzel">CHARACTER ARCHIVE</h1>
+            <p>파티원 및 적군의 능력치를 기록하십시오.</p>
+        </header>
+<div class="dice-dashboard">
+    <div class="dice-result-box">
+        <span id="dice-display">🎲 능력치를 클릭해 주사위를 굴리세요</span>
+    </div>
+    <div class="min-value-setting">
+        <span>📉 주사위 최소 보정값: </span>
+        <input type="number" id="min-dice" value="1" min="1">
+    </div>
+</div>
+        <section id="input-section">
+            <div class="input-card">
+                <input type="text" id="char-name" placeholder="캐릭터 이름을 입력하세요...">
+                <div class="stats-grid">
+                    <div class="stat-group"><span>체력</span><input type="number" id="hp"></div>
+                    <div class="stat-group"><span>스테미나</span><input type="number" id="stamina"></div>
+                    <div class="stat-group"><span>힘</span><input type="number" id="str"></div>
+                    <div class="stat-group"><span>건강</span><input type="number" id="health"></div>
+                    <div class="stat-group"><span>속도</span><input type="number" id="speed"></div>
+                    <div class="stat-group"><span>정밀</span><input type="number" id="precision"></div>
+                    <div class="stat-group"><span>지능</span><input type="number" id="intel"></div>
+                    <div class="stat-group"><span>지혜</span><input type="number" id="wis"></div>
+                    <div class="stat-group"><span>매력</span><input type="number" id="cha"></div>
+                </div>
+                <button onclick="saveCharacter()" class="save-btn">캐릭터 기록 저장</button>
             </div>
-            <button onclick="saveCharacter()">캐릭터 저장</button>
-        </div>
-        <hr>
-        <div id="character-list"></div>
+        </section>
+
+        <hr class="divider">
+
+        <section id="character-list">
+            </section>
     </div>
     <script src="script.js"></script>
 </body>
