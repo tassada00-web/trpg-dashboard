@@ -55,30 +55,39 @@ document.getElementById('excel-file').addEventListener('change', function(e) {
     reader.onload = function(e) {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, {type: 'array'});
-        const sheetName = workbook.SheetNames[0]; // 첫 번째 시트 사용
+        const sheetName = workbook.SheetNames[0]; 
         const sheet = workbook.Sheets[sheetName];
 
-        // 셀 위치에서 직접 데이터 추출 (sheet['셀좌표'].v)
-        // 값이 없을 경우를 대비해 뒤에 || 0 또는 || "이름없음"을 붙입니다.
-        const charData = {
-            name: sheet['C4'] ? sheet['C4'].v : "무명",
-            hp:   sheet['R4'] ? sheet['R4'].v : 0,
-            sta:  sheet['R5'] ? sheet['R5'].v : 0,
-            str:  sheet['R6'] ? sheet['R6'].v : 0,
-            hea:  sheet['R7'] ? sheet['R7'].v : 0,
-            spd:  sheet['R8'] ? sheet['R8'].v : 0,
-            pre:  sheet['R9'] ? sheet['R9'].v : 0,
-            int:  sheet['R10'] ? sheet['R10'].v : 0,
-            wis:  sheet['R11'] ? sheet['R11'].v : 0,
-            cha:  sheet['R12'] ? sheet['R12'].v : 0
-            // R13, R14, R15에 데미지나 방어력이 있다면 추가 가능합니다.
+        // 셀 값을 안전하게 가져오는 보조 함수
+        const getV = (addr, def = 0) => {
+            const cell = sheet[addr];
+            return cell ? (cell.v || def) : def;
         };
 
-        addCharacterCard(charData);
-        alert(`${charData.name} 시트를 불러왔습니다!`);
+        // 사용자 엑셀 구조 분석 결과:
+        // 이름은 C2 또는 C4에 있을 확률이 높습니다. 
+        // 결과값은 R열이 아닌 U열(최종 결과)일 가능성이 큽니다.
         
-        // 파일 입력창 초기화 (같은 파일을 다시 올릴 때를 대비)
-        e.target.value = '';
+        const name = getV('C2', getV('C4', "무명")); // C2 확인 후 없으면 C4 확인
+
+        const charData = {
+            name: name,
+            hp:   getV('U4', getV('R4', 0)), // U4 확인 후 없으면 R4 확인
+            sta:  getV('U5', getV('R5', 0)),
+            str:  getV('U6', getV('R6', 0)),
+            hea:  getV('U7', getV('R7', 0)),
+            spd:  getV('U8', getV('R8', 0)),
+            pre:  getV('U9', getV('R9', 0)),
+            int:  getV('U10', getV('R10', 0)),
+            wis:  getV('U11', getV('R11', 0)),
+            cha:  getV('U12', getV('R12', 0))
+        };
+
+        // 기존의 sheet_to_json 루프를 버리고 딱 한 장의 카드만 생성합니다.
+        addCharacterCard(charData);
+        
+        alert(`[${charData.name}] 캐릭터 시트를 성공적으로 불러왔습니다!`);
+        e.target.value = ''; // 같은 파일 다시 올릴 수 있게 초기화
     };
     reader.readAsArrayBuffer(file);
 });
