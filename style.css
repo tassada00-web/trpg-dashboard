@@ -21,3 +21,115 @@ header { text-align: center; margin-bottom: 30px; }
 .char-card { background: #1a1a1a; border-left: 5px solid #b45309; padding: 20px; margin-bottom: 15px; border-radius: 0 10px 10px 0; }
 .char-card h3 { margin-top: 0; color: #f3f4f6; }
 .char-stats-summary { display: grid; grid-template-columns: repeat(5, 1fr); font-size: 13px; color: #9ca3af; }
+.dice-dashboard {
+    position: sticky;
+    top: 0;
+    background: #1a1a1a;
+    padding: 20px;
+    border-bottom: 3px solid #b45309;
+    z-index: 100;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+
+.dice-result-box {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #fbbf24; /* 황금색 */
+    margin-bottom: 10px;
+}
+
+/* 능력치 수치를 클릭할 수 있는 버튼처럼 보이게 함 */
+.stat-btn {
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: #262626;
+    transition: all 0.2s;
+    display: inline-block;
+    margin: 2px;
+}
+
+.stat-btn:hover {
+    background: #b45309;
+    color: white;
+}
+.excel-upload-zone {
+    margin-top: 25px;
+    padding: 20px;
+    border: 2px dashed #b45309; /* 주황색 점선 테두리 */
+    border-radius: 10px;
+    text-align: center;
+    background: #111;
+    transition: all 0.3s ease;
+}
+
+.excel-upload-zone:hover {
+    background: #1a1a1a;
+    border-color: #fbbf24; /* 마우스 올리면 더 밝은 금색으로 */
+}
+
+.excel-upload-zone p {
+    font-size: 14px;
+    color: #9ca3af;
+    margin-bottom: 12px;
+    font-weight: bold;
+}
+
+/* 파일 선택 버튼 스타일 */
+#excel-file {
+    font-size: 13px;
+    color: #888;
+    cursor: pointer;
+}
+
+/* 캐릭터 카드 내의 능력치 버튼들 */
+.char-stats-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3열로 깔끔하게 정렬 */
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.stat-btn {
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: #262626;
+    border: 1px solid #333;
+    font-size: 13px;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.stat-btn:hover {
+    background: #b45309; /* 주황색 포인트 */
+    border-color: #fbbf24;
+    color: white;
+    transform: translateY(-2px); /* 살짝 떠오르는 효과 */
+}
+
+output-btn {
+    margin-left: 20px;
+    padding: 8px 20px;
+    background-color: #2563eb; /* 푸른색 박스 */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background 0.2s;
+}
+
+#output-btn:hover {
+    background-color: #1d4ed8;
+}
+
+/* 전광판 안에 버튼이 들어갈 때 정렬 */
+.dice-result-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+}

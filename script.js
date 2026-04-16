@@ -4,34 +4,66 @@
 const DEFAULT_WEBHOOK_URL = "https://discord.com/api/webhooks/1494322378564698152/Ywbob5pJ0zuOg199qDBayCLru8ZZDGlDM3dw2tvB56LW9Vkkja3X6HhdLz_E6yO4WYHs";
 
 // 1. 주사위 굴리기 및 디스코드 전송 (캐릭터 이름 추가)
-function rollDice(charName, statName, maxVal) {
-    const minVal = parseInt(document.getElementById('min-dice').value) || 1;
-    const display = document.getElementById('dice-display');
+let lastRollData = null;
 
-    if (maxVal < 1) {
-        display.innerText = "⚠️ 능력치 부족!";
+// 1. 주사위 굴리기 (수정됨: 외부 추가값 반영 + 전송 대기)
+    function rollDice(charName, statName, maxVal) {
+    const minVal = parseInt(document.getElementById('min-dice').value) || 1;
+    // [추가] 외부 추가값 가져오기 (음수/양수 가능)
+    const extraVal = parseInt(document.getElementById('extra-dice').value) || 0;
+    const display = document.getElementById('dice-display');
+    const outputBtn = document.getElementById('output-btn'); // 푸른색 버튼
+
+    // [로직] 주사위 최대 눈 = 능력치 + 외부 추가값
+    const finalMax = maxVal + extraVal;
+
+    if (finalMax < 1) {
+        display.innerText = "⚠️ 최대치가 1보다 작아 굴릴 수 없습니다!";
+        outputBtn.style.display = "none";
         return;
     }
 
     let result;
-    if (minVal >= maxVal) { 
-        result = maxVal; 
+    if (minVal >= finalMax) { 
+        result = finalMax; 
     } else {
         do { 
-            result = Math.floor(Math.random() * maxVal) + 1; 
+            result = Math.floor(Math.random() * finalMax) + 1; 
         } while (result < minVal);
     }
 
-    const resultText = `🎲 ${statName} 판정: [ ${result} ] (1~${maxVal})`;
-    display.innerText = resultText;
+    // [로직] 결과 전송하지 않고 보관만 함
+    lastRollData = {
+        charName: charName,
+        statName: statName,
+        result: result,
+        maxVal: finalMax
+    };
 
-    // 디스코드로 전송
-    sendToDiscord(charName, statName, result, maxVal);
+    // 화면 표시 및 [출력하기] 버튼 활성화
+    display.innerText = `🎲 [${charName}] ${statName}: ${result} (1~${finalMax})`;
+    outputBtn.style.display = "inline-block"; // 버튼 보이기
 }
 
-// 2. 디스코드 전송 함수
+// [신규 추가] 3번 로직: 출력하기 버튼 클릭 시 실제로 디스코드로 전송
+function confirmSend() {
+    if (!lastRollData) return;
+
+    // 보관된 데이터를 디스코드 전송 함수로 넘김
+    sendToDiscord(
+        lastRollData.charName, 
+        lastRollData.statName, 
+        lastRollData.result, 
+        lastRollData.maxVal
+    );
+
+    // 전송 후 버튼 다시 숨기기
+    document.getElementById('output-btn').style.display = "none";
+    document.getElementById('dice-display').innerText = "✅ 디스코드 전송 완료!";
+}
+
+// 2. 디스코드 전송 함수 (수정 없음)
 function sendToDiscord(charName, statName, result, maxVal) {
-    // 화면에 주소 입력칸이 있다면 그 값을 우선시하고, 비어있으면 고정 주소 사용
     const inputUrl = document.getElementById('webhook-url')?.value;
     const webhookUrl = inputUrl || DEFAULT_WEBHOOK_URL;
     
