@@ -173,3 +173,20 @@ body {
     border-radius: 5px;
     box-sizing: border-box;
 }
+
+/* [style.css] 모든 요소의 스크롤 바를 숨김 */
+
+/* 1. Chrome, Safari, Edge (대부분의 브라우저) */
+.sidebar::-webkit-scrollbar,
+.content-area::-webkit-scrollbar,
+body::-webkit-scrollbar {
+    display: none; /* 스크롤 바를 완전히 숨김 */
+}
+
+/* 2. Firefox */
+.sidebar,
+.content-area,
+body {
+    scrollbar-width: none; /* Firefox 전용 스크롤 바 숨김 */
+    -ms-overflow-style: none; /* 인터넷 익스플로러/구형 엣지용 */
+}
