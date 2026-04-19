@@ -1,15 +1,33 @@
-// [script.js] 모든 기능 통합 버전 (자동출력, 다이스로그, 로컬저장소, 12종능력치)
+// [script.js] 최종 통합 버전
+// 기능: 자동출력 옵션, 최신 10개 로그, 캐릭터 고정(좌측), 로컬 저장소(영구저장), 능력치 이름 표시
 
 const DEFAULT_WEBHOOK_URL = "https://discord.com/api/webhooks/1494322378564698152/Ywbob5pJ0zuOg199qDBayCLru8ZZDGlDM3dw2tvB56LW9Vkkja3X6HhdLz_E6yO4WYHs";
-let lastRollData = null; // 마지막 주사위 결과 임시 저장
+let lastRollData = null; 
 let savedCharacters = JSON.parse(localStorage.getItem('trpg_characters')) || [];
 
-// 1. 페이지 로드 시 저장된 캐릭터들 불러오기
+// 1. 페이지 로드 시 실행
 window.onload = function() {
-    savedCharacters.forEach(char => renderCard(char));
+    renderAll();
 };
 
-// 2. 주사위 굴리기 (최소보정, 외부추가값, 자동출력 반영)
+// 2. 화면 전체 렌더링 (메인 리스트 + 고정 리스트)
+function renderAll() {
+    const mainList = document.getElementById('character-list');
+    const pinnedList = document.getElementById('pinned-list');
+    
+    mainList.innerHTML = '';
+    pinnedList.innerHTML = '';
+
+    // 최신 등록순으로 정렬
+    const sorted = [...savedCharacters].sort((a, b) => b.id - a.id);
+
+    sorted.forEach(char => {
+        renderCard(char); // 메인 카드 생성
+        if (char.pinned) renderPinnedMiniCard(char); // 고정된 경우 왼쪽 사이드바 생성
+    });
+}
+
+// 3. 주사위 굴리기 (최소보정, 외부추가값, 자동출력, 로그 10개 제한 적용)
 function rollDice(charName, statName, maxVal) {
     const minVal = parseInt(document.getElementById('min-dice').value) || 1;
     const extraVal = parseInt(document.getElementById('extra-dice').value) || 0;
@@ -35,14 +53,13 @@ function rollDice(charName, statName, maxVal) {
         } while (result < minVal);
     }
 
-    // 데이터 저장
     lastRollData = { charName, statName, result, maxVal: finalMax };
 
     // 화면 표시 및 사이드바 로그 기록
     display.innerText = `🎲 [${charName}] ${statName}: ${result} (1~${finalMax})`;
     addLog(charName, statName, result, finalMax);
 
-    // 자동 출력 옵션 확인
+    // 옵션 1: 자동 출력 확인
     if (isAuto) {
         confirmSend();
     } else {
@@ -50,19 +67,25 @@ function rollDice(charName, statName, maxVal) {
     }
 }
 
-// 3. 사이드바 주사위 로그 추가
+// 4. 주사위 로그 추가 (최대 10개 제한)
 function addLog(name, stat, res, max) {
     const container = document.getElementById('dice-log-container');
     const log = document.createElement('div');
     log.className = 'log-item';
     const now = new Date().toLocaleTimeString();
     log.innerHTML = `<span style="color:#888; font-size:10px;">${now}</span><br><b>${name}</b> - ${stat}: <span style="color:#fbbf24">${res}</span> / ${max}`;
+    
     container.prepend(log);
+
+    // [옵션 2 반영] 로그가 10개를 넘으면 가장 오래된 것 삭제
+    if (container.children.length > 10) {
+        container.removeChild(container.lastChild);
+    }
 }
 
 function clearLog() { document.getElementById('dice-log-container').innerHTML = ""; }
 
-// 4. 캐릭터 저장 (입력창 데이터를 LocalStorage에 영구 저장)
+// 5. 캐릭터 저장 (로컬 저장소 연동)
 function saveCharacter() {
     const name = document.getElementById('char-name').value;
     if (!name) return alert("캐릭터 이름을 입력하세요!");
@@ -81,78 +104,103 @@ function saveCharacter() {
         cha: parseInt(document.getElementById('cha').value) || 0,
         dmg: parseInt(document.getElementById('dmg').value) || 0,
         dmgSub: parseInt(document.getElementById('dmg-sub').value) || 0,
-        def: parseInt(document.getElementById('def').value) || 0
+        def: parseInt(document.getElementById('def').value) || 0,
+        pinned: false // 기본값은 고정 안됨
     };
 
     savedCharacters.push(char);
     localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
-    renderCard(char);
+    renderAll();
     
     // 입력창 초기화
     document.getElementById('char-name').value = "";
-    const inputs = document.querySelectorAll('.stats-grid input');
-    inputs.forEach(input => input.value = "");
+    document.querySelectorAll('.stats-grid input').forEach(input => input.value = "");
 }
 
-// 5. 캐릭터 카드 화면에 그리기 (삭제 버튼 포함)
+// 6. 메인 캐릭터 카드 그리기 (능력치 이름 표시 보강)
 function renderCard(s) {
     const list = document.getElementById('character-list');
     const card = document.createElement('div');
     card.className = 'char-card';
     card.id = `char-${s.id}`;
-    
+    const pinActive = s.pinned ? 'active' : '';
+
     card.innerHTML = `
-        <button class="delete-btn" onclick="deleteCharacter(${s.id})">×</button>
+        <div class="card-controls">
+            <button class="pin-btn ${pinActive}" onclick="togglePin(${s.id})">📌</button>
+            <button class="delete-btn" onclick="deleteCharacter(${s.id})">×</button>
+        </div>
         <h3>${s.name}</h3>
         <div class="char-stats-summary">
-            <span class="stat-btn" onclick="rollDice('${s.name}', '체력', ${s.hp})">❤️ ${s.hp}</span>
-            <span class="stat-btn" onclick="rollDice('${s.name}', '스테', ${s.sta})">⚡ ${s.sta}</span>
-            <span class="stat-btn" onclick="rollDice('${s.name}', '힘', ${s.str})">💪 ${s.str}</span>
-            <span class="stat-btn" onclick="rollDice('${s.name}', '건강', ${s.hea})">🛡️ ${s.hea}</span>
-            <span class="stat-btn" onclick="rollDice('${s.name}', '속도', ${s.spd})">🏃 ${s.spd}</span>
-            <span class="stat-btn" onclick="rollDice('${s.name}', '정밀', ${s.pre})">🎯 ${s.pre}</span>
-            <span class="stat-btn" onclick="rollDice('${s.name}', '지능', ${s.int})">🧠 ${s.int}</span>
-            <span class="stat-btn" onclick="rollDice('${s.name}', '지혜', ${s.wis})">📖 ${s.wis}</span>
-            <span class="stat-btn" onclick="rollDice('${s.name}', '매력', ${s.cha})">✨ ${s.cha}</span>
-            <span class="stat-btn" onclick="rollDice('${s.name}', '데미지', ${s.dmg})">⚔️ ${s.dmg}</span>
-            <span class="stat-btn" onclick="rollDice('${s.name}', '보조뎀', ${s.dmgSub})">🗡️ ${s.dmgSub}</span>
-            <span class="stat-btn" onclick="rollDice('${s.name}', '방어력', ${s.def})">🛡️ ${s.def}</span>
+            ${statBtn(s.name, '체력', s.hp, '❤️')}
+            ${statBtn(s.name, '스테', s.sta, '⚡')}
+            ${statBtn(s.name, '힘', s.str, '💪')}
+            ${statBtn(s.name, '건강', s.hea, '🛡️')}
+            ${statBtn(s.name, '속도', s.spd, '🏃')}
+            ${statBtn(s.name, '정밀', s.pre, '🎯')}
+            ${statBtn(s.name, '지능', s.int, '🧠')}
+            ${statBtn(s.name, '지혜', s.wis, '📖')}
+            ${statBtn(s.name, '매력', s.cha, '✨')}
+            ${statBtn(s.name, '데미지', s.dmg, '⚔️')}
+            ${statBtn(s.name, '보조뎀', s.dmgSub, '🗡️')}
+            ${statBtn(s.name, '방어력', s.def, '🛡️')}
         </div>
     `;
-    list.prepend(card);
+    list.appendChild(card);
 }
 
-// 6. 캐릭터 삭제
+// 능력치 버튼 생성 보조 함수 (이름 명시)
+function statBtn(cName, sName, val, icon) {
+    return `<span class="stat-btn" onclick="rollDice('${cName}', '${sName}', ${val})">
+                <span class="stat-name">${icon} ${sName}</span> <b>${val}</b>
+            </span>`;
+}
+
+// 7. 왼쪽 사이드바 고정 미니 카드
+function renderPinnedMiniCard(s) {
+    const container = document.getElementById('pinned-list');
+    const mini = document.createElement('div');
+    mini.className = 'mini-card';
+    mini.innerHTML = `
+        <h4>📌 ${s.name}</h4>
+        <button onclick="document.getElementById('char-${s.id}').scrollIntoView({behavior:'smooth'})" 
+                style="font-size:10px; background:#333; color:white; border:none; cursor:pointer; padding:3px 7px; border-radius:3px;">이동하기</button>
+    `;
+    container.appendChild(mini);
+}
+
+// 8. 캐릭터 고정/삭제 기능
+function togglePin(id) {
+    savedCharacters = savedCharacters.map(c => c.id === id ? { ...c, pinned: !c.pinned } : c);
+    localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
+    renderAll();
+}
+
 function deleteCharacter(id) {
     if(!confirm("이 캐릭터를 삭제하시겠습니까?")) return;
     savedCharacters = savedCharacters.filter(c => c.id !== id);
     localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
-    document.getElementById(`char-${id}`).remove();
+    renderAll();
 }
 
-// 7. 디스코드 전송 확인 및 실행
+// 9. 디스코드 전송
 function confirmSend() {
     if (!lastRollData) return;
-    sendToDiscord(lastRollData.charName, lastRollData.statName, lastRollData.result, lastRollData.maxVal);
-    document.getElementById('output-btn').style.display = "none";
-}
-
-function sendToDiscord(charName, statName, result, maxVal) {
     const inputUrl = document.getElementById('webhook-url').value;
     const webhookUrl = inputUrl || DEFAULT_WEBHOOK_URL;
-    if (!webhookUrl) return;
-
+    
     fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            content: `**[${charName}]** ${statName} 판정: **${result}** / ${maxVal}`,
+            content: `**[${lastRollData.charName}]** ${lastRollData.statName} 판정: **${lastRollData.result}** / ${lastRollData.maxVal}`,
             username: "GM Dashboard"
         })
     });
+    document.getElementById('output-btn').style.display = "none";
 }
 
-// 8. 엑셀 로드 (좌표 정밀 타격 + 자동 저장 연동)
+// 10. 엑셀 로드
 document.getElementById('excel-file').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -182,13 +230,14 @@ document.getElementById('excel-file').addEventListener('change', function(e) {
             cha: getV('U12', getV('R12', 0)),
             dmg: getV('U13', getV('R13', 0)),
             dmgSub: getV('U14', getV('R14', 0)),
-            def: getV('U15', getV('R15', 0))
+            def: getV('U15', getV('R15', 0)),
+            pinned: false
         };
 
         savedCharacters.push(char);
         localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
-        renderCard(char);
-        alert(`[${char.name}] 캐릭터를 저장하고 불러왔습니다.`);
+        renderAll();
+        alert(`[${char.name}] 캐릭터 시트를 성공적으로 불러와 저장했습니다.`);
         e.target.value = '';
     };
     reader.readAsArrayBuffer(file);
