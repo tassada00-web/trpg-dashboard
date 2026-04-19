@@ -7,60 +7,70 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1 class="cinzel">CHARACTER ARCHIVE</h1>
-            <p>파티원 및 적군의 능력치를 기록하고 디스코드와 연동하십시오.</p>
-        </header>
+    <div class="main-layout">
+        <div class="content-area">
+            <div class="container">
+                <header>
+                    <h1 class="cinzel">CHARACTER ARCHIVE</h1>
+                </header>
 
-        <div class="dice-dashboard">
-            <div class="dice-result-box">
-                <span id="dice-display">🎲 판정 준비 완료</span>
-                <button id="output-btn" onclick="confirmSend()" style="display:none;">출력하기</button>
-            </div>
-            
-            <div class="min-value-setting">
-                <span>📉 최소 보정: </span>
-                <input type="number" id="min-dice" value="1" min="1" style="width: 45px;">
-                
-                <span style="margin-left: 15px;">➕ 외부 추가값: </span>
-                <input type="number" id="extra-dice" value="0" style="width: 45px;">
+                <div class="dice-dashboard">
+                    <div class="dice-result-box">
+                        <span id="dice-display">🎲 판정 준비 완료</span>
+                        <button id="output-btn" onclick="confirmSend()" style="display:none;">출력하기</button>
+                    </div>
+                    
+                    <div class="min-value-setting">
+                        <span>📉 최소 보정: </span>
+                        <input type="number" id="min-dice" value="1" min="1" style="width: 45px;">
+                        <span style="margin-left: 10px;">➕ 외부 추가: </span>
+                        <input type="number" id="extra-dice" value="0" style="width: 45px;">
+                        
+                        <label style="margin-left: 15px; font-size: 13px; color: #fbbf24; cursor:pointer;">
+                            <input type="checkbox" id="auto-output"> 자동 출력하기
+                        </label>
 
-                <span style="margin-left: 15px;">🔗 웹후크: </span>
-                <input type="password" id="webhook-url" placeholder="Webhook URL" style="width: 200px;">
+                        <span style="margin-left: 15px;">🔗 웹후크: </span>
+                        <input type="password" id="webhook-url" placeholder="URL" style="width: 150px;">
+                    </div>
+                </div>
+
+                <section id="input-section">
+                    <div class="input-card">
+                        <input type="text" id="char-name" placeholder="캐릭터 이름을 입력하세요...">
+                        <div class="stats-grid">
+                            <div class="stat-group"><span>체력</span><input type="number" id="hp"></div>
+                            <div class="stat-group"><span>스테미나</span><input type="number" id="stamina"></div>
+                            <div class="stat-group"><span>힘</span><input type="number" id="str"></div>
+                            <div class="stat-group"><span>건강</span><input type="number" id="health"></div>
+                            <div class="stat-group"><span>속도</span><input type="number" id="speed"></div>
+                            <div class="stat-group"><span>정밀</span><input type="number" id="precision"></div>
+                            <div class="stat-group"><span>지능</span><input type="number" id="intel"></div>
+                            <div class="stat-group"><span>지혜</span><input type="number" id="wis"></div>
+                            <div class="stat-group"><span>매력</span><input type="number" id="cha"></div>
+                            <div class="stat-group"><span>데미지</span><input type="number" id="dmg"></div>
+                            <div class="stat-group"><span>보조 뎀</span><input type="number" id="dmg-sub"></div>
+                            <div class="stat-group"><span>방어력</span><input type="number" id="def"></div>
+                        </div>
+                        <button onclick="saveCharacter()" class="save-btn">캐릭터 기록하기</button>
+                        <div class="excel-upload-zone">
+                            <p>📊 엑셀 파일 불러오기</p>
+                            <input type="file" id="excel-file" accept=".xlsx, .xls">
+                        </div>
+                    </div>
+                </section>
+
+                <hr class="divider">
+                <section id="character-list"></section>
             </div>
         </div>
 
-        <section id="input-section">
-            <div class="input-card">
-                <input type="text" id="char-name" placeholder="캐릭터 이름을 입력하세요...">
-                
-                <div class="stats-grid">
-                    <div class="stat-group"><span>체력</span><input type="number" id="hp"></div>
-                    <div class="stat-group"><span>스테미나</span><input type="number" id="stamina"></div>
-                    <div class="stat-group"><span>힘</span><input type="number" id="str"></div>
-                    <div class="stat-group"><span>건강</span><input type="number" id="health"></div>
-                    <div class="stat-group"><span>속도</span><input type="number" id="speed"></div>
-                    <div class="stat-group"><span>정밀</span><input type="number" id="precision"></div>
-                    <div class="stat-group"><span>지능</span><input type="number" id="intel"></div>
-                    <div class="stat-group"><span>지혜</span><input type="number" id="wis"></div>
-                    <div class="stat-group"><span>매력</span><input type="number" id="cha"></div>
-                    <div class="stat-group"><span>데미지</span><input type="number" id="dmg"></div>
-                    <div class="stat-group"><span>보조 데미지</span><input type="number" id="dmg-sub"></div>
-                    <div class="stat-group"><span>방어력</span><input type="number" id="def"></div>
+        <div class="sidebar">
+            <h2 class="cinzel" style="font-size: 18px; border-bottom: 1px solid #b45309; padding-bottom: 10px;">DICE LOG</h2>
+            <div id="dice-log-container">
                 </div>
-                
-                <button onclick="saveCharacter()" class="save-btn">캐릭터 기록 저장</button>
-
-                <div class="excel-upload-zone">
-                    <p>📊 엑셀 파일(C4/R4~R15)로 캐릭터 불러오기</p>
-                    <input type="file" id="excel-file" accept=".xlsx, .xls">
-                </div>
-            </div>
-        </section>
-
-        <hr class="divider">
-        <section id="character-list"></section>
+            <button onclick="clearLog()" style="margin-top: 10px; background: none; border: 1px solid #444; color: #888; cursor: pointer; width: 100%; font-size: 12px;">로그 비우기</button>
+        </div>
     </div>
     <script src="script.js"></script>
 </body>
