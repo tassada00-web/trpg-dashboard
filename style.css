@@ -1,33 +1,39 @@
-/* [style.css] - 기존 내용을 모두 지우고 이 코드를 복사하세요. */
-
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap');
 
 /* 1. 기본 배경 및 레이아웃 설정 */
+html {
+    background-color: #0d0d0d;
+}
+
 body { 
     background-color: #0d0d0d; 
     color: #d1d5db; 
     font-family: 'Pretendard', sans-serif; 
     margin: 0; 
-    overflow: hidden; /* 전체 페이지 스크롤 방지 (사이드바 내부 스크롤 사용) */
+    overflow: auto;
+    min-width: 1180px;
+    min-height: 100vh;
 }
 
 .main-layout { 
     display: flex; 
-    width: 100vw; 
+    width: 100%; 
     height: 100vh; 
+    min-width: 1180px;
 }
 
-/* 2. 사이드바 디자인 (좌/우 공통) */
+/* 2. 사이드바 디자인 */
 .sidebar { 
     width: 260px; 
+    min-width: 260px; /* 줄어들지 않게 고정 */
     background: #111; 
     padding: 20px; 
     overflow-y: auto; 
     flex-shrink: 0; 
 }
 
-.left-sidebar { border-right: 2px solid #b45309; }   /* 고정 캐릭터 영역 */
-.right-sidebar { border-left: 2px solid #b45309; }  /* 주사위 로그 영역 */
+.left-sidebar { border-right: 2px solid #b45309; }
+.right-sidebar { border-left: 2px solid #b45309; }
 
 .cinzel { 
     font-family: 'Cinzel', serif; 
@@ -42,17 +48,21 @@ body {
 /* 3. 중앙 메인 작업 구역 */
 .content-area { 
     flex: 1; 
+    min-width: 600px; /* 중앙 UI 보호 */
     overflow-y: auto; 
     padding: 30px; 
     background: #0d0d0d; 
 }
 
-.container { max-width: 800px; margin: 0 auto; }
+.container { 
+    max-width: 800px; 
+    margin: 0 auto; 
+}
 
-/* 4. 주사위 전광판 (상단 고정) */
+/* 4. 주사위 전광판 */
 .dice-dashboard {
     position: sticky;
-    top: -30px; /* content-area 패딩 고려 */
+    top: -30px;
     background: #1a1a1a;
     padding: 20px;
     border-bottom: 3px solid #b45309;
@@ -73,7 +83,7 @@ body {
     margin-bottom: 15px;
 }
 
-/* 출력하기 버튼 (푸른색) */
+/* 출력 버튼 */
 #output-btn {
     padding: 8px 20px;
     background-color: #2563eb;
@@ -88,17 +98,16 @@ body {
 
 #output-btn:hover { background-color: #1d4ed8; }
 
-/* 5. 캐릭터 카드 디자인 */
+/* 5. 캐릭터 카드 */
 .char-card { 
     background: #1a1a1a; 
     border-left: 5px solid #b45309; 
     padding: 20px; 
     margin-bottom: 20px; 
     border-radius: 0 10px 10px 0; 
-    position: relative; /* 버튼 위치 조정을 위해 필요 */
+    position: relative;
 }
 
-/* ★ 능력치 이름 가독성 해결: 2열 배치 및 이름/숫자 분리 ★ */
 .char-stats-summary { 
     display: grid; 
     grid-template-columns: repeat(2, 1fr); 
@@ -114,7 +123,7 @@ body {
     border: 1px solid #333;
     font-size: 13px;
     display: flex;
-    justify-content: space-between; /* 왼쪽엔 이름, 오른쪽엔 숫자 */
+    justify-content: space-between;
     align-items: center;
     transition: all 0.2s;
 }
@@ -125,9 +134,12 @@ body {
     transform: translateY(-2px);
 }
 
-.stat-name { color: #9ca3af; font-weight: bold; } /* 능력치 이름 전용 색상 */
+.stat-name { 
+    color: #9ca3af; 
+    font-weight: bold; 
+}
 
-/* 6. 카드 상단 컨트롤 (핀/삭제) */
+/* 6. 카드 컨트롤 */
 .card-controls {
     position: absolute;
     top: 15px;
@@ -136,11 +148,28 @@ body {
     gap: 12px;
 }
 
-.pin-btn { background: none; border: none; color: #444; cursor: pointer; font-size: 18px; }
-.pin-btn.active { color: #fbbf24; text-shadow: 0 0 5px #fbbf24; }
-.delete-btn { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 20px; }
+.pin-btn { 
+    background: none; 
+    border: none; 
+    color: #444; 
+    cursor: pointer; 
+    font-size: 18px; 
+}
 
-/* 7. 사이드바 아이템 디자인 */
+.pin-btn.active { 
+    color: #fbbf24; 
+    text-shadow: 0 0 5px #fbbf24; 
+}
+
+.delete-btn { 
+    background: none; 
+    border: none; 
+    color: #ef4444; 
+    cursor: pointer; 
+    font-size: 20px; 
+}
+
+/* 7. 사이드바 아이템 */
 .log-item {
     background: #1a1a1a;
     padding: 10px;
@@ -158,12 +187,34 @@ body {
     border-radius: 6px;
 }
 
-.mini-card h4 { margin: 0 0 8px 0; color: #fbbf24; font-size: 14px; }
+.mini-card h4 { 
+    margin: 0 0 8px 0; 
+    color: #fbbf24; 
+    font-size: 14px; 
+}
 
-/* 8. 입력 구역 (기존 스타일 최적화) */
-.input-card { background: #1a1a1a; padding: 25px; border-radius: 10px; border: 1px solid #333; }
-.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; }
-.stat-group span { font-size: 12px; color: #9ca3af; margin-bottom: 5px; display: block; }
+/* 8. 입력 구역 */
+.input-card { 
+    background: #1a1a1a; 
+    padding: 25px; 
+    border-radius: 10px; 
+    border: 1px solid #333; 
+}
+
+.stats-grid { 
+    display: grid; 
+    grid-template-columns: repeat(3, 1fr); 
+    gap: 15px; 
+    margin: 20px 0; 
+}
+
+.stat-group span { 
+    font-size: 12px; 
+    color: #9ca3af; 
+    margin-bottom: 5px; 
+    display: block; 
+}
+
 .stat-group input { 
     width: 100%; 
     padding: 8px; 
@@ -174,19 +225,14 @@ body {
     box-sizing: border-box;
 }
 
-/* [style.css] 모든 요소의 스크롤 바를 숨김 */
-
-/* 1. Chrome, Safari, Edge (대부분의 브라우저) */
+/* 스크롤바 숨김 (body 제외) */
 .sidebar::-webkit-scrollbar,
-.content-area::-webkit-scrollbar,
-body::-webkit-scrollbar {
-    display: none; /* 스크롤 바를 완전히 숨김 */
+.content-area::-webkit-scrollbar {
+    display: none;
 }
 
-/* 2. Firefox */
 .sidebar,
-.content-area,
-body {
-    scrollbar-width: none; /* Firefox 전용 스크롤 바 숨김 */
-    -ms-overflow-style: none; /* 인터넷 익스플로러/구형 엣지용 */
+.content-area {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
