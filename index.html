@@ -59,10 +59,14 @@
             </div>
         </main>
 
-        <aside class="sidebar right-sidebar">
-            <h2 class="cinzel">DICE LOG</h2>
-            <div id="dice-log-container"></div>
-            <button onclick="clearLog()" class="clear-log-btn">로그 비우기</button>
+        <aside class="sidebar right-sidebar" id="right-sidebar">
+            <button class="log-toggle-btn" onclick="toggleLogPanel()">◀</button>
+
+            <div class="log-panel-content">
+                <h2 class="cinzel">DICE LOG</h2>
+                <div id="dice-log-container"></div>
+                <button onclick="clearLog()" class="clear-log-btn">로그 비우기</button>
+            </div>
         </aside>
     </div>
     <script src="script.js"></script>
