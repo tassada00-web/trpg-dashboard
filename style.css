@@ -24,16 +24,57 @@ body {
 
 /* 2. 사이드바 디자인 */
 .sidebar { 
-    width: 260px; 
-    min-width: 260px; /* 줄어들지 않게 고정 */
     background: #111; 
     padding: 20px; 
     overflow-y: auto; 
     flex-shrink: 0; 
 }
 
-.left-sidebar { border-right: 2px solid #b45309; }
-.right-sidebar { border-left: 2px solid #b45309; }
+/* 왼쪽 (축소) */
+.left-sidebar { 
+    width: 180px;
+    min-width: 180px;
+    border-right: 2px solid #b45309; 
+}
+
+/* 오른쪽 (로그) */
+.right-sidebar { 
+    width: 260px;
+    min-width: 260px;
+    border-left: 2px solid #b45309;
+    position: relative;
+    transition: width 0.25s ease, min-width 0.25s ease;
+}
+
+/* 닫힌 상태 */
+.right-sidebar.closed {
+    width: 42px;
+    min-width: 42px;
+    padding-left: 8px;
+    padding-right: 8px;
+    overflow: hidden;
+}
+
+/* 내부 숨김 */
+.right-sidebar.closed .log-panel-content {
+    display: none;
+}
+
+/* 버튼 */
+.log-toggle-btn {
+    position: absolute;
+    top: 14px;
+    left: 4px;
+    width: 28px;
+    height: 42px;
+    background: #b45309;
+    color: white;
+    border: none;
+    border-radius: 6px 0 0 6px;
+    cursor: pointer;
+    font-weight: bold;
+    z-index: 200;
+}
 
 .cinzel { 
     font-family: 'Cinzel', serif; 
@@ -55,8 +96,8 @@ body {
 }
 
 .container { 
-    max-width: 800px; 
-    margin: 0 auto; 
+    width: 100%;
+    max-width: none;
 }
 
 /* 4. 주사위 전광판 */

@@ -242,3 +242,10 @@ document.getElementById('excel-file').addEventListener('change', function(e) {
     };
     reader.readAsArrayBuffer(file);
 });
+function toggleLogPanel() {
+    const panel = document.getElementById('right-sidebar');
+    panel.classList.toggle('closed');
+
+    const btn = panel.querySelector('.log-toggle-btn');
+    btn.textContent = panel.classList.contains('closed') ? '▶' : '◀';
+}
