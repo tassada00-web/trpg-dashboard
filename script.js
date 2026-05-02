@@ -199,7 +199,7 @@ function renderPinnedMiniCard(s) {
 
         <button onclick="showCharacter(${s.id})"
             style="font-size:10px; background:#333; color:white; border:none; cursor:pointer; padding:3px 7px; border-radius:3px;">
-            이동하기
+            불러오기
         </button>
     `;
 
