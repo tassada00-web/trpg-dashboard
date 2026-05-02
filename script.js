@@ -1,20 +1,22 @@
 // [script.js] 최종 통합 버전
-// 기능: 자동출력 옵션, 최신 10개 로그, 캐릭터 고정(좌측), 로컬 저장소(영구저장), 능력치 이름 표시
+// 기능: 자동출력 옵션, 최신 10개 로그, 캐릭터 고정(좌측), 로컬 저장소, 메인 숨김, 로그 토글, PINNED 드래그 정렬
 
 const DEFAULT_WEBHOOK_URL = "https://discord.com/api/webhooks/1494322378564698152/Ywbob5pJ0zuOg199qDBayCLru8ZZDGlDM3dw2tvB56LW9Vkkja3X6HhdLz_E6yO4WYHs";
-let lastRollData = null; 
+
+let lastRollData = null;
+let dragId = null;
 let savedCharacters = JSON.parse(localStorage.getItem('trpg_characters')) || [];
 
-// 1. 페이지 로드 시 실행
-window.onload = function() {
+// 1. 페이지 로드
+window.onload = function () {
     renderAll();
 };
 
-// 2. 화면 전체 렌더링 (메인 리스트 + 고정 리스트)
+// 2. 전체 렌더링
 function renderAll() {
     const mainList = document.getElementById('character-list');
     const pinnedList = document.getElementById('pinned-list');
-    
+
     mainList.innerHTML = '';
     pinnedList.innerHTML = '';
 
@@ -26,22 +28,21 @@ function renderAll() {
 
     const pinnedChars = savedCharacters
         .filter(c => c.pinned)
-        .sort((a, b) => (a.order || a.id) - (b.order || b.id));
+        .sort((a, b) => (a.order ?? a.id) - (b.order ?? b.id));
 
     pinnedChars.forEach(char => {
         renderPinnedMiniCard(char);
     });
 }
 
-// 3. 주사위 굴리기 (최소보정, 외부추가값, 자동출력, 로그 10개 제한 적용)
+// 3. 주사위 굴리기
 function rollDice(charName, statName, maxVal) {
     const minVal = parseInt(document.getElementById('min-dice').value) || 1;
     const extraVal = parseInt(document.getElementById('extra-dice').value) || 0;
-    const isAuto = document.getElementById('auto-output').checked; 
+    const isAuto = document.getElementById('auto-output').checked;
     const display = document.getElementById('dice-display');
     const outputBtn = document.getElementById('output-btn');
 
-    // 최종 최대치 = 능력치 + 외부 추가값
     const finalMax = maxVal + extraVal;
 
     if (finalMax < 1) {
@@ -51,6 +52,7 @@ function rollDice(charName, statName, maxVal) {
     }
 
     let result;
+
     if (minVal >= finalMax) {
         result = finalMax;
     } else {
@@ -61,11 +63,9 @@ function rollDice(charName, statName, maxVal) {
 
     lastRollData = { charName, statName, result, maxVal: finalMax };
 
-    // 화면 표시 및 사이드바 로그 기록
     display.innerText = `🎲 [${charName}] ${statName}: ${result} (1~${finalMax})`;
     addLog(charName, statName, result, finalMax);
 
-    // 옵션 1: 자동 출력 확인
     if (isAuto) {
         confirmSend();
     } else {
@@ -73,25 +73,32 @@ function rollDice(charName, statName, maxVal) {
     }
 }
 
-// 4. 주사위 로그 추가 (최대 10개 제한)
+// 4. 로그 추가
 function addLog(name, stat, res, max) {
     const container = document.getElementById('dice-log-container');
     const log = document.createElement('div');
     log.className = 'log-item';
+
     const now = new Date().toLocaleTimeString();
-    log.innerHTML = `<span style="color:#888; font-size:10px;">${now}</span><br><b>${name}</b> - ${stat}: <span style="color:#fbbf24">${res}</span> / ${max}`;
-    
+
+    log.innerHTML = `
+        <span style="color:#888; font-size:10px;">${now}</span><br>
+        <b>${name}</b> - ${stat}: 
+        <span style="color:#fbbf24">${res}</span> / ${max}
+    `;
+
     container.prepend(log);
 
-    // [옵션 2 반영] 로그가 10개를 넘으면 가장 오래된 것 삭제
     if (container.children.length > 10) {
         container.removeChild(container.lastChild);
     }
 }
 
-function clearLog() { document.getElementById('dice-log-container').innerHTML = ""; }
+function clearLog() {
+    document.getElementById('dice-log-container').innerHTML = "";
+}
 
-// 5. 캐릭터 저장 (로컬 저장소 연동)
+// 5. 캐릭터 저장
 function saveCharacter() {
     const name = document.getElementById('char-name').value;
     if (!name) return alert("캐릭터 이름을 입력하세요!");
@@ -117,20 +124,21 @@ function saveCharacter() {
     };
 
     savedCharacters.push(char);
-    localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
+    saveData();
     renderAll();
-    
-    // 입력창 초기화
+
     document.getElementById('char-name').value = "";
     document.querySelectorAll('.stats-grid input').forEach(input => input.value = "");
 }
 
-// 6. 메인 캐릭터 카드 그리기 (능력치 이름 표시 보강)
+// 6. 메인 캐릭터 카드
 function renderCard(s) {
     const list = document.getElementById('character-list');
     const card = document.createElement('div');
+
     card.className = 'char-card';
     card.id = `char-${s.id}`;
+
     const pinActive = s.pinned ? 'active' : '';
 
     card.innerHTML = `
@@ -138,7 +146,9 @@ function renderCard(s) {
             <button class="pin-btn ${pinActive}" onclick="togglePin(${s.id})">📌</button>
             <button class="delete-btn" onclick="hideCharacter(${s.id})">×</button>
         </div>
+
         <h3>${s.name}</h3>
+
         <div class="char-stats-summary">
             ${statBtn(s.name, '체력', s.hp, '❤️')}
             ${statBtn(s.name, '스테', s.sta, '⚡')}
@@ -154,23 +164,26 @@ function renderCard(s) {
             ${statBtn(s.name, '방어력', s.def, '🛡️')}
         </div>
     `;
+
     list.appendChild(card);
 }
 
-// 능력치 버튼 생성 보조 함수 (이름 명시)
+// 7. 능력치 버튼
 function statBtn(cName, sName, val, icon) {
-    return `<span class="stat-btn" onclick="rollDice('${cName}', '${sName}', ${val})">
-                <span class="stat-name">${icon} ${sName}</span> <b>${val}</b>
-            </span>`;
+    return `
+        <span class="stat-btn" onclick="rollDice('${cName}', '${sName}', ${val})">
+            <span class="stat-name">${icon} ${sName}</span>
+            <b>${val}</b>
+        </span>
+    `;
 }
 
-// 7. 왼쪽 사이드바 고정 미니 카드
+// 8. 왼쪽 PINNED 카드
 function renderPinnedMiniCard(s) {
     const container = document.getElementById('pinned-list');
     const mini = document.createElement('div');
-    mini.className = 'mini-card';
 
-    // 👇 여기 추가
+    mini.className = 'mini-card';
     mini.draggable = true;
     mini.dataset.id = s.id;
 
@@ -184,8 +197,8 @@ function renderPinnedMiniCard(s) {
             <button class="mini-unpin-btn" onclick="unpinCharacter(${s.id})">×</button>
         </div>
 
-        <button onclick="showCharacter(${s.id})" 
-                style="font-size:10px; background:#333; color:white; border:none; cursor:pointer; padding:3px 7px; border-radius:3px;">
+        <button onclick="showCharacter(${s.id})"
+            style="font-size:10px; background:#333; color:white; border:none; cursor:pointer; padding:3px 7px; border-radius:3px;">
             이동하기
         </button>
     `;
@@ -193,37 +206,76 @@ function renderPinnedMiniCard(s) {
     container.appendChild(mini);
 }
 
-// 8. 캐릭터 고정/삭제 기능
+// 9. 고정 토글
 function togglePin(id) {
-    savedCharacters = savedCharacters.map(c => c.id === id ? { ...c, pinned: !c.pinned } : c);
-    localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
+    savedCharacters = savedCharacters.map(c => {
+        if (c.id !== id) return c;
+
+        return {
+            ...c,
+            pinned: !c.pinned,
+            order: c.order ?? Date.now()
+        };
+    });
+
+    saveData();
     renderAll();
 }
 
-
-
+// 10. 메인 카드 숨김
 function hideCharacter(id) {
-    savedCharacters = savedCharacters.map(c => 
+    savedCharacters = savedCharacters.map(c =>
         c.id === id ? { ...c, hidden: true } : c
     );
-    localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
+
+    saveData();
     renderAll();
 }
 
+// 11. 왼쪽 고정 해제
 function unpinCharacter(id) {
-    savedCharacters = savedCharacters.map(c => 
+    savedCharacters = savedCharacters.map(c =>
         c.id === id ? { ...c, pinned: false } : c
     );
-    localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
+
+    saveData();
     renderAll();
 }
 
-// 9. 디스코드 전송
+// 12. 숨긴 캐릭터 다시 표시
+function showCharacter(id) {
+    savedCharacters = savedCharacters.map(c =>
+        c.id === id ? { ...c, hidden: false } : c
+    );
+
+    saveData();
+    renderAll();
+
+    setTimeout(() => {
+        document.getElementById(`char-${id}`)?.scrollIntoView({ behavior: 'smooth' });
+    }, 50);
+}
+
+// 13. 메인 카드 전체 숨김
+function hideAllCharacters() {
+    if (!confirm("메인 캐릭터를 전부 숨기겠습니까?")) return;
+
+    savedCharacters = savedCharacters.map(c => ({
+        ...c,
+        hidden: true
+    }));
+
+    saveData();
+    renderAll();
+}
+
+// 14. 디스코드 전송
 function confirmSend() {
     if (!lastRollData) return;
+
     const inputUrl = document.getElementById('webhook-url').value;
     const webhookUrl = inputUrl || DEFAULT_WEBHOOK_URL;
-    
+
     fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -232,18 +284,20 @@ function confirmSend() {
             username: "GM Dashboard"
         })
     });
+
     document.getElementById('output-btn').style.display = "none";
 }
 
-// 10. 엑셀 로드
-document.getElementById('excel-file').addEventListener('change', function(e) {
+// 15. 엑셀 로드
+document.getElementById('excel-file').addEventListener('change', function (e) {
     const file = e.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = function(e) {
+
+    reader.onload = function (e) {
         const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, {type: 'array'});
+        const workbook = XLSX.read(data, { type: 'array' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
         const getV = (addr, def = 0) => {
@@ -272,13 +326,17 @@ document.getElementById('excel-file').addEventListener('change', function(e) {
         };
 
         savedCharacters.push(char);
-        localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
+        saveData();
         renderAll();
+
         alert(`[${char.name}] 캐릭터 시트를 성공적으로 불러와 저장했습니다.`);
         e.target.value = '';
     };
+
     reader.readAsArrayBuffer(file);
 });
+
+// 16. 로그 패널 열고 닫기
 function toggleLogPanel() {
     const panel = document.getElementById('right-sidebar');
     panel.classList.toggle('closed');
@@ -287,34 +345,9 @@ function toggleLogPanel() {
     btn.textContent = panel.classList.contains('closed') ? '▶' : '◀';
 }
 
-function showCharacter(id) {
-    savedCharacters = savedCharacters.map(c => 
-        c.id === id ? { ...c, hidden: false } : c
-    );
-    localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
-    renderAll();
-
-    setTimeout(() => {
-        document.getElementById(`char-${id}`)?.scrollIntoView({ behavior: 'smooth' });
-    }, 50);
-}
-
-function hideAllCharacters() {
-    if (!confirm("메인 캐릭터를 전부 숨기겠습니까?")) return;
-
-    savedCharacters = savedCharacters.map(c => ({
-        ...c,
-        hidden: true
-    }));
-
-    localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
-    renderAll();
-}
-
-let dragId = null;
-
+// 17. PINNED 드래그 정렬
 function handleDragStart(e) {
-    dragId = Number(this.dataset.id);
+    dragId = Number(e.currentTarget.dataset.id);
 }
 
 function handleDragOver(e) {
@@ -322,30 +355,33 @@ function handleDragOver(e) {
 }
 
 function handleDrop(e) {
-    const dropId = Number(this.dataset.id);
+    e.preventDefault();
 
-    if (dragId === dropId) return;
+    const dropId = Number(e.currentTarget.dataset.id);
 
-    // pinned만 따로 뽑기
-    let pinned = savedCharacters.filter(c => c.pinned);
+    if (!dragId || dragId === dropId) return;
 
-    // 순서 기준 정렬
-    pinned.sort((a, b) => (a.order || a.id) - (b.order || b.id));
+    let pinned = savedCharacters
+        .filter(c => c.pinned)
+        .sort((a, b) => (a.order ?? a.id) - (b.order ?? b.id));
 
     const dragIndex = pinned.findIndex(c => c.id === dragId);
     const dropIndex = pinned.findIndex(c => c.id === dropId);
 
     if (dragIndex === -1 || dropIndex === -1) return;
 
-    // 요소 이동
     const [moved] = pinned.splice(dragIndex, 1);
     pinned.splice(dropIndex, 0, moved);
 
-    // order 재정렬
     pinned.forEach((c, i) => {
         c.order = i;
     });
 
-    localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
+    saveData();
     renderAll();
+}
+
+// 18. 저장 공통 함수
+function saveData() {
+    localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
 }
