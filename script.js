@@ -22,7 +22,14 @@ function renderAll() {
 
     sorted.forEach(char => {
         if (!char.hidden) renderCard(char);
-        if (char.pinned) renderPinnedMiniCard(char);
+    });
+
+    const pinnedChars = savedCharacters
+        .filter(c => c.pinned)
+        .sort((a, b) => (a.order || a.id) - (b.order || b.id));
+
+    pinnedChars.forEach(char => {
+        renderPinnedMiniCard(char);
     });
 }
 
@@ -105,7 +112,8 @@ function saveCharacter() {
         dmgSub: parseInt(document.getElementById('dmg-sub').value) || 0,
         def: parseInt(document.getElementById('def').value) || 0,
         pinned: false,
-        hidden: false
+        hidden: false,
+        order: Date.now()
     };
 
     savedCharacters.push(char);
@@ -161,6 +169,14 @@ function renderPinnedMiniCard(s) {
     const container = document.getElementById('pinned-list');
     const mini = document.createElement('div');
     mini.className = 'mini-card';
+
+    // 👇 여기 추가
+    mini.draggable = true;
+    mini.dataset.id = s.id;
+
+    mini.addEventListener('dragstart', handleDragStart);
+    mini.addEventListener('dragover', handleDragOver);
+    mini.addEventListener('drop', handleDrop);
 
     mini.innerHTML = `
         <div class="mini-card-header">
@@ -251,7 +267,8 @@ document.getElementById('excel-file').addEventListener('change', function(e) {
             dmgSub: getV('U14', getV('R14', 0)),
             def: getV('U15', getV('R15', 0)),
             pinned: false,
-            hidden: false
+            hidden: false,
+            order: Date.now()
         };
 
         savedCharacters.push(char);
@@ -289,6 +306,45 @@ function hideAllCharacters() {
         ...c,
         hidden: true
     }));
+
+    localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
+    renderAll();
+}
+
+let dragId = null;
+
+function handleDragStart(e) {
+    dragId = Number(this.dataset.id);
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+}
+
+function handleDrop(e) {
+    const dropId = Number(this.dataset.id);
+
+    if (dragId === dropId) return;
+
+    // pinned만 따로 뽑기
+    let pinned = savedCharacters.filter(c => c.pinned);
+
+    // 순서 기준 정렬
+    pinned.sort((a, b) => (a.order || a.id) - (b.order || b.id));
+
+    const dragIndex = pinned.findIndex(c => c.id === dragId);
+    const dropIndex = pinned.findIndex(c => c.id === dropId);
+
+    if (dragIndex === -1 || dropIndex === -1) return;
+
+    // 요소 이동
+    const [moved] = pinned.splice(dragIndex, 1);
+    pinned.splice(dropIndex, 0, moved);
+
+    // order 재정렬
+    pinned.forEach((c, i) => {
+        c.order = i;
+    });
 
     localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
     renderAll();

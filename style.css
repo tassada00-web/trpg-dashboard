@@ -310,3 +310,11 @@ body {
 .clear-main-btn:hover {
     background: #991b1b;
 }
+.mini-card {
+    cursor: grab;
+}
+
+.mini-card:active {
+    cursor: grabbing;
+    opacity: 0.65;
+}
