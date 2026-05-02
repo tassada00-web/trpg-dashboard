@@ -18,12 +18,11 @@ function renderAll() {
     mainList.innerHTML = '';
     pinnedList.innerHTML = '';
 
-    // 최신 등록순으로 정렬
     const sorted = [...savedCharacters].sort((a, b) => b.id - a.id);
 
     sorted.forEach(char => {
-        renderCard(char); // 메인 카드 생성
-        if (char.pinned) renderPinnedMiniCard(char); // 고정된 경우 왼쪽 사이드바 생성
+        if (!char.hidden) renderCard(char);
+        if (char.pinned) renderPinnedMiniCard(char);
     });
 }
 
@@ -105,7 +104,8 @@ function saveCharacter() {
         dmg: parseInt(document.getElementById('dmg').value) || 0,
         dmgSub: parseInt(document.getElementById('dmg-sub').value) || 0,
         def: parseInt(document.getElementById('def').value) || 0,
-        pinned: false // 기본값은 고정 안됨
+        pinned: false,
+        hidden: false
     };
 
     savedCharacters.push(char);
@@ -128,7 +128,7 @@ function renderCard(s) {
     card.innerHTML = `
         <div class="card-controls">
             <button class="pin-btn ${pinActive}" onclick="togglePin(${s.id})">📌</button>
-            <button class="delete-btn" onclick="deleteCharacter(${s.id})">×</button>
+            <button class="delete-btn" onclick="hideCharacter(${s.id})">×</button>
         </div>
         <h3>${s.name}</h3>
         <div class="char-stats-summary">
@@ -161,11 +161,19 @@ function renderPinnedMiniCard(s) {
     const container = document.getElementById('pinned-list');
     const mini = document.createElement('div');
     mini.className = 'mini-card';
+
     mini.innerHTML = `
-        <h4>📌 ${s.name}</h4>
-        <button onclick="document.getElementById('char-${s.id}').scrollIntoView({behavior:'smooth'})" 
-                style="font-size:10px; background:#333; color:white; border:none; cursor:pointer; padding:3px 7px; border-radius:3px;">이동하기</button>
+        <div class="mini-card-header">
+            <h4>📌 ${s.name}</h4>
+            <button class="mini-unpin-btn" onclick="unpinCharacter(${s.id})">×</button>
+        </div>
+
+        <button onclick="showCharacter(${s.id})" 
+                style="font-size:10px; background:#333; color:white; border:none; cursor:pointer; padding:3px 7px; border-radius:3px;">
+            이동하기
+        </button>
     `;
+
     container.appendChild(mini);
 }
 
@@ -176,9 +184,20 @@ function togglePin(id) {
     renderAll();
 }
 
-function deleteCharacter(id) {
-    if(!confirm("이 캐릭터를 삭제하시겠습니까?")) return;
-    savedCharacters = savedCharacters.filter(c => c.id !== id);
+
+
+function hideCharacter(id) {
+    savedCharacters = savedCharacters.map(c => 
+        c.id === id ? { ...c, hidden: true } : c
+    );
+    localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
+    renderAll();
+}
+
+function unpinCharacter(id) {
+    savedCharacters = savedCharacters.map(c => 
+        c.id === id ? { ...c, pinned: false } : c
+    );
     localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
     renderAll();
 }
@@ -231,7 +250,8 @@ document.getElementById('excel-file').addEventListener('change', function(e) {
             dmg: getV('U13', getV('R13', 0)),
             dmgSub: getV('U14', getV('R14', 0)),
             def: getV('U15', getV('R15', 0)),
-            pinned: false
+            pinned: false,
+            hidden: false
         };
 
         savedCharacters.push(char);
@@ -248,4 +268,28 @@ function toggleLogPanel() {
 
     const btn = panel.querySelector('.log-toggle-btn');
     btn.textContent = panel.classList.contains('closed') ? '▶' : '◀';
+}
+
+function showCharacter(id) {
+    savedCharacters = savedCharacters.map(c => 
+        c.id === id ? { ...c, hidden: false } : c
+    );
+    localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
+    renderAll();
+
+    setTimeout(() => {
+        document.getElementById(`char-${id}`)?.scrollIntoView({ behavior: 'smooth' });
+    }, 50);
+}
+
+function hideAllCharacters() {
+    if (!confirm("메인 캐릭터를 전부 숨기겠습니까?")) return;
+
+    savedCharacters = savedCharacters.map(c => ({
+        ...c,
+        hidden: true
+    }));
+
+    localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
+    renderAll();
 }

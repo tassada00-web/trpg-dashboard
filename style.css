@@ -277,3 +277,36 @@ body {
     scrollbar-width: none;
     -ms-overflow-style: none;
 }
+
+.mini-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.mini-unpin-btn {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.mini-unpin-btn:hover {
+    color: #ff7777;
+}
+.clear-main-btn {
+    margin: 10px 0;
+    padding: 8px 14px;
+    background: #7f1d1d;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.clear-main-btn:hover {
+    background: #991b1b;
+}
