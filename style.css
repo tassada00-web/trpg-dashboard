@@ -336,3 +336,38 @@ body {
     font-weight: bold;
     letter-spacing: 1px;
 }   
+
+.dragging-card {
+    opacity: 0.35;
+}
+
+.card-placeholder {
+    height: 90px;
+    margin-bottom: 20px;
+    border: 2px dashed #f59e0b;
+    background: rgba(245, 158, 11, 0.08);
+    color: #f59e0b;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.card-order-input {
+    width: 52px;
+    height: 28px;
+    background: #111;
+    border: 2px solid #ef4444;
+    color: #fbbf24;
+    border-radius: 4px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.card-order-input:focus {
+    outline: none;
+    border-color: #f59e0b;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+}

@@ -1,18 +1,19 @@
 // [script.js] 최종 통합 버전
-// 기능: 자동출력 옵션, 최신 10개 로그, 캐릭터 고정(좌측), 로컬 저장소, 메인 숨김, 로그 토글, PINNED 드래그 정렬
+// 기능: 자동출력, 최신 10개 로그, 저장 목록, 메인 숨김, 로그 토글, 드래그 정렬, 순서 직접 입력
 
 const DEFAULT_WEBHOOK_URL = "https://discord.com/api/webhooks/1494322378564698152/Ywbob5pJ0zuOg199qDBayCLru8ZZDGlDM3dw2tvB56LW9Vkkja3X6HhdLz_E6yO4WYHs";
 
 let lastRollData = null;
 let dragId = null;
+let mainDragId = null;
+let placeholder = null;
+
 let savedCharacters = JSON.parse(localStorage.getItem('trpg_characters')) || [];
 
-// 1. 페이지 로드
 window.onload = function () {
     renderAll();
 };
 
-// 2. 전체 렌더링
 function renderAll() {
     const mainList = document.getElementById('character-list');
     const pinnedList = document.getElementById('pinned-list');
@@ -21,11 +22,13 @@ function renderAll() {
     pinnedList.innerHTML = '';
 
     const sorted = [...savedCharacters].sort((a, b) => {
-    return (a.mainOrder ?? -a.id) - (b.mainOrder ?? -b.id);
-});
+        return (a.mainOrder ?? -a.id) - (b.mainOrder ?? -b.id);
+    });
 
-    sorted.forEach(char => {
-        if (!char.hidden) renderCard(char);
+    const visibleCards = sorted.filter(char => !char.hidden);
+
+    visibleCards.forEach((char, index) => {
+        renderCard(char, index + 1);
     });
 
     const pinnedChars = savedCharacters
@@ -37,7 +40,6 @@ function renderAll() {
     });
 }
 
-// 3. 주사위 굴리기
 function rollDice(charName, statName, maxVal) {
     const minVal = parseInt(document.getElementById('min-dice').value) || 1;
     const extraVal = parseInt(document.getElementById('extra-dice').value) || 0;
@@ -75,7 +77,6 @@ function rollDice(charName, statName, maxVal) {
     }
 }
 
-// 4. 로그 추가
 function addLog(name, stat, res, max) {
     const container = document.getElementById('dice-log-container');
     const log = document.createElement('div');
@@ -100,7 +101,6 @@ function clearLog() {
     document.getElementById('dice-log-container').innerHTML = "";
 }
 
-// 5. 캐릭터 저장
 function saveCharacter() {
     const name = document.getElementById('char-name').value;
     if (!name) return alert("캐릭터 이름을 입력하세요!");
@@ -122,7 +122,8 @@ function saveCharacter() {
         def: parseInt(document.getElementById('def').value) || 0,
         pinned: false,
         hidden: false,
-        order: Date.now()
+        order: Date.now(),
+        mainOrder: Date.now()
     };
 
     savedCharacters.push(char);
@@ -133,8 +134,7 @@ function saveCharacter() {
     document.querySelectorAll('.stats-grid input').forEach(input => input.value = "");
 }
 
-// 6. 메인 캐릭터 카드
-function renderCard(s) {
+function renderCard(s, orderNumber) {
     const list = document.getElementById('character-list');
     const card = document.createElement('div');
 
@@ -153,6 +153,16 @@ function renderCard(s) {
 
     card.innerHTML = `
         <div class="card-controls">
+            <input 
+                type="number" 
+                class="card-order-input" 
+                value="${orderNumber}" 
+                min="1"
+                onchange="changeMainOrder(${s.id}, this.value)"
+                onclick="event.stopPropagation()"
+                onmousedown="event.stopPropagation()"
+                draggable="false"
+            >
             <button class="pin-btn ${pinActive}" onclick="togglePin(${s.id})">📌</button>
             <button class="delete-btn" onclick="hideCharacter(${s.id})">×</button>
         </div>
@@ -178,7 +188,6 @@ function renderCard(s) {
     list.appendChild(card);
 }
 
-// 7. 능력치 버튼
 function statBtn(cName, sName, val, icon) {
     return `
         <span class="stat-btn" onclick="rollDice('${cName}', '${sName}', ${val})">
@@ -188,7 +197,6 @@ function statBtn(cName, sName, val, icon) {
     `;
 }
 
-// 8. 왼쪽 PINNED 카드
 function renderPinnedMiniCard(s) {
     const container = document.getElementById('pinned-list');
     const mini = document.createElement('div');
@@ -197,9 +205,9 @@ function renderPinnedMiniCard(s) {
     mini.draggable = true;
     mini.dataset.id = s.id;
 
-    mini.addEventListener('dragstart', handleDragStart);
-    mini.addEventListener('dragover', handleDragOver);
-    mini.addEventListener('drop', handleDrop);
+    mini.addEventListener('dragstart', handlePinnedDragStart);
+    mini.addEventListener('dragover', handlePinnedDragOver);
+    mini.addEventListener('drop', handlePinnedDrop);
 
     mini.innerHTML = `
         <div class="mini-card-header">
@@ -216,7 +224,6 @@ function renderPinnedMiniCard(s) {
     container.appendChild(mini);
 }
 
-// 9. 고정 토글
 function togglePin(id) {
     savedCharacters = savedCharacters.map(c => {
         if (c.id !== id) return c;
@@ -232,7 +239,6 @@ function togglePin(id) {
     renderAll();
 }
 
-// 10. 메인 카드 숨김
 function hideCharacter(id) {
     savedCharacters = savedCharacters.map(c =>
         c.id === id ? { ...c, hidden: true } : c
@@ -242,7 +248,6 @@ function hideCharacter(id) {
     renderAll();
 }
 
-// 11. 왼쪽 고정 해제
 function unpinCharacter(id) {
     savedCharacters = savedCharacters.map(c =>
         c.id === id ? { ...c, pinned: false } : c
@@ -252,7 +257,6 @@ function unpinCharacter(id) {
     renderAll();
 }
 
-// 12. 숨긴 캐릭터 다시 표시
 function showCharacter(id) {
     savedCharacters = savedCharacters.map(c =>
         c.id === id ? { ...c, hidden: false } : c
@@ -266,7 +270,6 @@ function showCharacter(id) {
     }, 50);
 }
 
-// 13. 메인 카드 전체 숨김
 function hideAllCharacters() {
     if (!confirm("메인 캐릭터를 전부 숨기겠습니까?")) return;
 
@@ -279,7 +282,6 @@ function hideAllCharacters() {
     renderAll();
 }
 
-// 14. 디스코드 전송
 function confirmSend() {
     if (!lastRollData) return;
 
@@ -298,7 +300,6 @@ function confirmSend() {
     document.getElementById('output-btn').style.display = "none";
 }
 
-// 15. 엑셀 로드
 document.getElementById('excel-file').addEventListener('change', function (e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -332,7 +333,8 @@ document.getElementById('excel-file').addEventListener('change', function (e) {
             def: getV('U15', getV('R15', 0)),
             pinned: false,
             hidden: false,
-            order: Date.now()
+            order: Date.now(),
+            mainOrder: Date.now()
         };
 
         savedCharacters.push(char);
@@ -346,7 +348,6 @@ document.getElementById('excel-file').addEventListener('change', function (e) {
     reader.readAsArrayBuffer(file);
 });
 
-// 16. 로그 패널 열고 닫기
 function toggleLogPanel() {
     const panel = document.getElementById('right-sidebar');
     panel.classList.toggle('closed');
@@ -355,16 +356,16 @@ function toggleLogPanel() {
     btn.textContent = panel.classList.contains('closed') ? '▶' : '◀';
 }
 
-// 17. PINNED 드래그 정렬
-function handleDragStart(e) {
+/* PINNED 드래그 */
+function handlePinnedDragStart(e) {
     dragId = Number(e.currentTarget.dataset.id);
 }
 
-function handleDragOver(e) {
+function handlePinnedDragOver(e) {
     e.preventDefault();
 }
 
-function handleDrop(e) {
+function handlePinnedDrop(e) {
     e.preventDefault();
 
     const dropId = Number(e.currentTarget.dataset.id);
@@ -391,22 +392,16 @@ function handleDrop(e) {
     renderAll();
 }
 
-// 18. 저장 공통 함수
-function saveData() {
-    localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
-}
-
-let mainDragId = null;
-let placeholder = null;
-
+/* 메인 카드 드래그 + 예상 위치 */
 function createPlaceholder() {
     if (!placeholder) {
         placeholder = document.createElement('div');
         placeholder.className = 'card-placeholder';
         placeholder.innerHTML = '여기에 배치';
 
-        placeholder.addEventListener('dragover', function(e) {
+        placeholder.addEventListener('dragover', function (e) {
             e.preventDefault();
+            autoScrollDuringDrag(e);
         });
 
         placeholder.addEventListener('drop', handleMainDropOnPlaceholder);
@@ -418,10 +413,13 @@ function createPlaceholder() {
 function handleMainDragStart(e) {
     mainDragId = Number(e.currentTarget.dataset.id);
     e.currentTarget.classList.add('dragging-card');
+
+    document.addEventListener('dragover', autoScrollDuringDrag);
 }
 
 function handleMainDragOver(e) {
     e.preventDefault();
+    autoScrollDuringDrag(e);
 
     const list = document.getElementById('character-list');
     const targetCard = e.currentTarget;
@@ -442,20 +440,39 @@ function handleMainDragOver(e) {
 function handleMainDrop(e) {
     e.preventDefault();
 
-    const dropId = Number(e.currentTarget.dataset.id);
-    if (!mainDragId || mainDragId === dropId) return;
+    const list = document.getElementById('character-list');
+    const dropIndex = [...list.children].indexOf(placeholder);
 
+    applyMainReorder(dropIndex);
+}
+
+function handleMainDropOnPlaceholder(e) {
+    e.preventDefault();
+
+    const list = document.getElementById('character-list');
+    const dropIndex = [...list.children].indexOf(placeholder);
+
+    applyMainReorder(dropIndex);
+}
+
+function applyMainReorder(targetIndex) {
     let visibleCards = savedCharacters
         .filter(c => !c.hidden)
         .sort((a, b) => (a.mainOrder ?? -a.id) - (b.mainOrder ?? -b.id));
 
     const dragIndex = visibleCards.findIndex(c => c.id === mainDragId);
-    const dropIndex = visibleCards.findIndex(c => c.id === dropId);
+    if (dragIndex === -1) return;
 
-    if (dragIndex === -1 || dropIndex === -1) return;
+    if (targetIndex < 0) targetIndex = visibleCards.length - 1;
+    if (targetIndex > visibleCards.length) targetIndex = visibleCards.length;
 
     const [moved] = visibleCards.splice(dragIndex, 1);
-    visibleCards.splice(dropIndex, 0, moved);
+
+    if (targetIndex > dragIndex) {
+        targetIndex--;
+    }
+
+    visibleCards.splice(targetIndex, 0, moved);
 
     visibleCards.forEach((c, i) => {
         c.mainOrder = i;
@@ -468,6 +485,8 @@ function handleMainDrop(e) {
 function handleMainDragEnd(e) {
     e.currentTarget.classList.remove('dragging-card');
 
+    document.removeEventListener('dragover', autoScrollDuringDrag);
+
     if (placeholder && placeholder.parentNode) {
         placeholder.parentNode.removeChild(placeholder);
     }
@@ -476,22 +495,39 @@ function handleMainDragEnd(e) {
     mainDragId = null;
 }
 
-function handleMainDropOnPlaceholder(e) {
-    e.preventDefault();
+function autoScrollDuringDrag(e) {
+    const area = document.querySelector('.content-area');
+    if (!area) return;
 
-    const list = document.getElementById('character-list');
+    const rect = area.getBoundingClientRect();
+    const threshold = 90;
+    const speed = 18;
+
+    if (e.clientY < rect.top + threshold) {
+        area.scrollBy(0, -speed);
+    }
+
+    if (e.clientY > rect.bottom - threshold) {
+        area.scrollBy(0, speed);
+    }
+}
+
+/* 숫자 입력 순서 변경 */
+function changeMainOrder(id, value) {
+    let targetIndex = parseInt(value, 10);
 
     let visibleCards = savedCharacters
         .filter(c => !c.hidden)
         .sort((a, b) => (a.mainOrder ?? -a.id) - (b.mainOrder ?? -b.id));
 
-    const dragIndex = visibleCards.findIndex(c => c.id === mainDragId);
-    if (dragIndex === -1) return;
+    const currentIndex = visibleCards.findIndex(c => c.id === id);
+    if (currentIndex === -1) return;
 
-    const placeholderIndex = [...list.children].indexOf(placeholder);
+    if (isNaN(targetIndex) || targetIndex < 1) targetIndex = 1;
+    if (targetIndex > visibleCards.length) targetIndex = visibleCards.length;
 
-    const [moved] = visibleCards.splice(dragIndex, 1);
-    visibleCards.splice(placeholderIndex, 0, moved);
+    const [moved] = visibleCards.splice(currentIndex, 1);
+    visibleCards.splice(targetIndex - 1, 0, moved);
 
     visibleCards.forEach((c, i) => {
         c.mainOrder = i;
@@ -499,4 +535,8 @@ function handleMainDropOnPlaceholder(e) {
 
     saveData();
     renderAll();
+}
+
+function saveData() {
+    localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
 }
