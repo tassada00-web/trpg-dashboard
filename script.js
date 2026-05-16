@@ -20,7 +20,9 @@ function renderAll() {
     mainList.innerHTML = '';
     pinnedList.innerHTML = '';
 
-    const sorted = [...savedCharacters].sort((a, b) => b.id - a.id);
+    const sorted = [...savedCharacters].sort((a, b) => {
+    return (a.mainOrder ?? -a.id) - (b.mainOrder ?? -b.id);
+});
 
     sorted.forEach(char => {
         if (!char.hidden) renderCard(char);
@@ -138,6 +140,14 @@ function renderCard(s) {
 
     card.className = 'char-card';
     card.id = `char-${s.id}`;
+
+    card.draggable = true;
+    card.dataset.id = s.id;
+
+    card.addEventListener('dragstart', handleMainDragStart);
+    card.addEventListener('dragover', handleMainDragOver);
+    card.addEventListener('drop', handleMainDrop);
+    card.addEventListener('dragend', handleMainDragEnd);
 
     const pinActive = s.pinned ? 'active' : '';
 
@@ -384,4 +394,109 @@ function handleDrop(e) {
 // 18. 저장 공통 함수
 function saveData() {
     localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
+}
+
+let mainDragId = null;
+let placeholder = null;
+
+function createPlaceholder() {
+    if (!placeholder) {
+        placeholder = document.createElement('div');
+        placeholder.className = 'card-placeholder';
+        placeholder.innerHTML = '여기에 배치';
+
+        placeholder.addEventListener('dragover', function(e) {
+            e.preventDefault();
+        });
+
+        placeholder.addEventListener('drop', handleMainDropOnPlaceholder);
+    }
+
+    return placeholder;
+}
+
+function handleMainDragStart(e) {
+    mainDragId = Number(e.currentTarget.dataset.id);
+    e.currentTarget.classList.add('dragging-card');
+}
+
+function handleMainDragOver(e) {
+    e.preventDefault();
+
+    const list = document.getElementById('character-list');
+    const targetCard = e.currentTarget;
+
+    if (!targetCard || Number(targetCard.dataset.id) === mainDragId) return;
+
+    const box = targetCard.getBoundingClientRect();
+    const offset = e.clientY - box.top;
+    const place = createPlaceholder();
+
+    if (offset < box.height / 2) {
+        list.insertBefore(place, targetCard);
+    } else {
+        list.insertBefore(place, targetCard.nextSibling);
+    }
+}
+
+function handleMainDrop(e) {
+    e.preventDefault();
+
+    const dropId = Number(e.currentTarget.dataset.id);
+    if (!mainDragId || mainDragId === dropId) return;
+
+    let visibleCards = savedCharacters
+        .filter(c => !c.hidden)
+        .sort((a, b) => (a.mainOrder ?? -a.id) - (b.mainOrder ?? -b.id));
+
+    const dragIndex = visibleCards.findIndex(c => c.id === mainDragId);
+    const dropIndex = visibleCards.findIndex(c => c.id === dropId);
+
+    if (dragIndex === -1 || dropIndex === -1) return;
+
+    const [moved] = visibleCards.splice(dragIndex, 1);
+    visibleCards.splice(dropIndex, 0, moved);
+
+    visibleCards.forEach((c, i) => {
+        c.mainOrder = i;
+    });
+
+    saveData();
+    renderAll();
+}
+
+function handleMainDragEnd(e) {
+    e.currentTarget.classList.remove('dragging-card');
+
+    if (placeholder && placeholder.parentNode) {
+        placeholder.parentNode.removeChild(placeholder);
+    }
+
+    placeholder = null;
+    mainDragId = null;
+}
+
+function handleMainDropOnPlaceholder(e) {
+    e.preventDefault();
+
+    const list = document.getElementById('character-list');
+
+    let visibleCards = savedCharacters
+        .filter(c => !c.hidden)
+        .sort((a, b) => (a.mainOrder ?? -a.id) - (b.mainOrder ?? -b.id));
+
+    const dragIndex = visibleCards.findIndex(c => c.id === mainDragId);
+    if (dragIndex === -1) return;
+
+    const placeholderIndex = [...list.children].indexOf(placeholder);
+
+    const [moved] = visibleCards.splice(dragIndex, 1);
+    visibleCards.splice(placeholderIndex, 0, moved);
+
+    visibleCards.forEach((c, i) => {
+        c.mainOrder = i;
+    });
+
+    saveData();
+    renderAll();
 }
