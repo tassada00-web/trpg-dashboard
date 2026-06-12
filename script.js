@@ -8,11 +8,47 @@ let dragId = null;
 let mainDragId = null;
 let placeholder = null;
 
-let savedCharacters = JSON.parse(localStorage.getItem('trpg_characters')) || [];
+const STAT_DEFS = [
+    { key: "str", label: "힘", icon: "💪", inputId: "str", bonusInputId: "str-bonus" },
+    { key: "hea", label: "건강", icon: "🛡️", inputId: "health", bonusInputId: "health-bonus" },
+    { key: "spd", label: "속도", icon: "🏃", inputId: "speed", bonusInputId: "speed-bonus" },
+    { key: "pre", label: "정밀", icon: "🎯", inputId: "precision", bonusInputId: "precision-bonus" },
+    { key: "int", label: "지능", icon: "🧠", inputId: "intel", bonusInputId: "intel-bonus" },
+    { key: "wis", label: "지혜", icon: "📖", inputId: "wis", bonusInputId: "wis-bonus" },
+    { key: "cha", label: "매력", icon: "✨", inputId: "cha", bonusInputId: "cha-bonus" }
+];
+
+const SHEET_STAT_LABELS = STAT_DEFS.reduce((labels, stat) => {
+    labels[stat.label] = stat.key;
+    return labels;
+}, {});
+
+let savedCharacters = (JSON.parse(localStorage.getItem('trpg_characters')) || []).map(sanitizeCharacter);
 
 window.onload = function () {
+    saveData();
     renderAll();
 };
+
+function sanitizeCharacter(char) {
+    const id = char.id ?? Date.now();
+    const sanitized = {
+        id,
+        name: char.name || "무명",
+        bonus: {},
+        pinned: Boolean(char.pinned),
+        hidden: Boolean(char.hidden),
+        order: char.order ?? id,
+        mainOrder: char.mainOrder ?? id
+    };
+
+    STAT_DEFS.forEach(stat => {
+        sanitized[stat.key] = Number(char[stat.key]) || 0;
+        sanitized.bonus[stat.key] = Number(char.bonus?.[stat.key] ?? char[`${stat.key}Bonus`] ?? 0) || 0;
+    });
+
+    return sanitized;
+}
 
 function renderAll() {
     const mainList = document.getElementById('character-list');
@@ -40,7 +76,7 @@ function renderAll() {
     });
 }
 
-function rollDice(charName, statName, maxVal) {
+function rollDice(charName, statName, maxVal, bonusVal = 0) {
     const minVal = parseInt(document.getElementById('min-dice').value) || 1;
     const extraVal = parseInt(document.getElementById('extra-dice').value) || 0;
     const isAuto = document.getElementById('auto-output').checked;
@@ -48,6 +84,7 @@ function rollDice(charName, statName, maxVal) {
     const outputBtn = document.getElementById('output-btn');
 
     const finalMax = maxVal + extraVal;
+    const bonus = Number(bonusVal) || 0;
 
     if (finalMax < 1) {
         display.innerText = "⚠️ 최대치가 1 미만입니다!";
@@ -65,10 +102,12 @@ function rollDice(charName, statName, maxVal) {
         } while (result < minVal);
     }
 
-    lastRollData = { charName, statName, result, maxVal: finalMax };
+    const total = result + bonus;
 
-    display.innerText = `🎲 [${charName}] ${statName}: ${result} (1~${finalMax})`;
-    addLog(charName, statName, result, finalMax);
+    lastRollData = { charName, statName, roll: result, bonus, result: total, maxVal: finalMax };
+
+    display.innerText = formatRollDisplay(lastRollData);
+    addLog(lastRollData);
 
     if (isAuto) {
         confirmSend();
@@ -77,17 +116,30 @@ function rollDice(charName, statName, maxVal) {
     }
 }
 
-function addLog(name, stat, res, max) {
+function formatSignedNumber(value) {
+    return value > 0 ? `+${value}` : String(value);
+}
+
+function formatRollDisplay(data) {
+    if (data.bonus) {
+        return `🎲 [${data.charName}] ${data.statName}: ${data.roll} ${formatSignedNumber(data.bonus)} = ${data.result} (1~${data.maxVal})`;
+    }
+
+    return `🎲 [${data.charName}] ${data.statName}: ${data.result} (1~${data.maxVal})`;
+}
+
+function addLog(data) {
     const container = document.getElementById('dice-log-container');
     const log = document.createElement('div');
     log.className = 'log-item';
 
     const now = new Date().toLocaleTimeString();
+    const bonusDetail = data.bonus ? ` <small>(${data.roll} ${formatSignedNumber(data.bonus)})</small>` : "";
 
     log.innerHTML = `
         <span style="color:#888; font-size:10px;">${now}</span><br>
-        <b>${name}</b> - ${stat}: 
-        <span style="color:#fbbf24">${res}</span> / ${max}
+        <b>${data.charName}</b> - ${data.statName}:
+        <span style="color:#fbbf24">${data.result}</span>${bonusDetail} / ${data.maxVal}
     `;
 
     container.prepend(log);
@@ -101,6 +153,15 @@ function clearLog() {
     document.getElementById('dice-log-container').innerHTML = "";
 }
 
+function resetCharacterInputs() {
+    document.getElementById('char-name').value = "";
+
+    STAT_DEFS.forEach(stat => {
+        document.getElementById(stat.inputId).value = "10";
+        document.getElementById(stat.bonusInputId).value = "0";
+    });
+}
+
 function saveCharacter() {
     const name = document.getElementById('char-name').value;
     if (!name) return alert("캐릭터 이름을 입력하세요!");
@@ -108,30 +169,23 @@ function saveCharacter() {
     const char = {
         id: Date.now(),
         name: name,
-        hp: parseInt(document.getElementById('hp').value) || 0,
-        sta: parseInt(document.getElementById('stamina').value) || 0,
-        str: parseInt(document.getElementById('str').value) || 0,
-        hea: parseInt(document.getElementById('health').value) || 0,
-        spd: parseInt(document.getElementById('speed').value) || 0,
-        pre: parseInt(document.getElementById('precision').value) || 0,
-        int: parseInt(document.getElementById('intel').value) || 0,
-        wis: parseInt(document.getElementById('wis').value) || 0,
-        cha: parseInt(document.getElementById('cha').value) || 0,
-        dmg: parseInt(document.getElementById('dmg').value) || 0,
-        dmgSub: parseInt(document.getElementById('dmg-sub').value) || 0,
-        def: parseInt(document.getElementById('def').value) || 0,
+        bonus: {},
         pinned: false,
         hidden: false,
         order: Date.now(),
         mainOrder: Date.now()
     };
 
+    STAT_DEFS.forEach(stat => {
+        char[stat.key] = parseInt(document.getElementById(stat.inputId).value, 10) || 0;
+        char.bonus[stat.key] = parseInt(document.getElementById(stat.bonusInputId).value, 10) || 0;
+    });
+
     savedCharacters.push(char);
     saveData();
     renderAll();
 
-    document.getElementById('char-name').value = "";
-    document.querySelectorAll('.stats-grid input').forEach(input => input.value = "");
+    resetCharacterInputs();
 }
 
 function renderCard(s, orderNumber) {
@@ -170,29 +224,37 @@ function renderCard(s, orderNumber) {
         <h3>${s.name}</h3>
 
         <div class="char-stats-summary">
-            ${statBtn(s.name, '체력', s.hp, '❤️')}
-            ${statBtn(s.name, '스테', s.sta, '⚡')}
-            ${statBtn(s.name, '힘', s.str, '💪')}
-            ${statBtn(s.name, '건강', s.hea, '🛡️')}
-            ${statBtn(s.name, '속도', s.spd, '🏃')}
-            ${statBtn(s.name, '정밀', s.pre, '🎯')}
-            ${statBtn(s.name, '지능', s.int, '🧠')}
-            ${statBtn(s.name, '지혜', s.wis, '📖')}
-            ${statBtn(s.name, '매력', s.cha, '✨')}
-            ${statBtn(s.name, '데미지', s.dmg, '⚔️')}
-            ${statBtn(s.name, '보조뎀', s.dmgSub, '🗡️')}
-            ${statBtn(s.name, '방어력', s.def, '🛡️')}
+            ${STAT_DEFS.map(stat => statBtn(s.name, stat.label, s[stat.key], s.bonus?.[stat.key] ?? 0, stat.icon)).join('')}
         </div>
     `;
 
     list.appendChild(card);
 }
 
-function statBtn(cName, sName, val, icon) {
+function escapeHtmlAttr(value) {
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+}
+
+function jsStringArg(value) {
+    return escapeHtmlAttr(JSON.stringify(String(value)));
+}
+
+function statBtn(cName, sName, val, bonus, icon) {
+    const baseValue = Number(val) || 0;
+    const bonusValue = Number(bonus) || 0;
+
     return `
-        <span class="stat-btn" onclick="rollDice('${cName}', '${sName}', ${val})">
+        <span class="stat-btn" onclick="rollDice(${jsStringArg(cName)}, ${jsStringArg(sName)}, ${baseValue}, ${bonusValue})">
             <span class="stat-name">${icon} ${sName}</span>
-            <b>${val}</b>
+            <span class="stat-values">
+                <b>${baseValue}</b>
+                <small>${formatSignedNumber(bonusValue)}</small>
+            </span>
         </span>
     `;
 }
@@ -292,12 +354,98 @@ function confirmSend() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            content: `**[${lastRollData.charName}]** ${lastRollData.statName} 판정: **${lastRollData.result}** / ${lastRollData.maxVal}`,
+            content: `**[${lastRollData.charName}]** ${lastRollData.statName} 판정: **${lastRollData.result}** / ${lastRollData.maxVal}${lastRollData.bonus ? ` (${lastRollData.roll} ${formatSignedNumber(lastRollData.bonus)})` : ""}`,
             username: "GM Dashboard"
         })
     });
 
     document.getElementById('output-btn').style.display = "none";
+}
+
+function normalizeSheetText(value) {
+    return String(value ?? "").replace(/\s+/g, "").trim();
+}
+
+function readCell(sheet, row, col) {
+    if (row < 0 || col < 0) return null;
+    const address = XLSX.utils.encode_cell({ r: row, c: col });
+    return sheet[address]?.v ?? sheet[address]?.w ?? null;
+}
+
+function readNumberCell(sheet, row, col) {
+    const rawValue = readCell(sheet, row, col);
+    if (rawValue == null || rawValue === "") return null;
+
+    const value = Number(rawValue);
+    return Number.isFinite(value) ? Math.round(value) : null;
+}
+
+function findCharacterName(sheet, range) {
+    for (let row = range.s.r; row <= range.e.r; row += 1) {
+        for (let col = range.s.c; col <= range.e.c; col += 1) {
+            if (normalizeSheetText(readCell(sheet, row, col)) === "이름") {
+                const name = readCell(sheet, row, col + 1);
+                if (name) return String(name).trim();
+            }
+        }
+    }
+    return "";
+}
+
+function findBaseColumnForTotal(sheet, range, headerRow, totalCol) {
+    for (let col = totalCol - 1; col >= range.s.c; col -= 1) {
+        if (normalizeSheetText(readCell(sheet, headerRow, col)) === "기본") {
+            return col;
+        }
+    }
+
+    return null;
+}
+
+function extractStatsFromWorkbook(workbook) {
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const range = XLSX.utils.decode_range(sheet["!ref"] || "A1:A1");
+    const stats = {};
+    const totalColumns = [];
+
+    for (let row = range.s.r; row <= range.e.r; row += 1) {
+        for (let col = range.s.c; col <= range.e.c; col += 1) {
+            if (normalizeSheetText(readCell(sheet, row, col)) === "합계") {
+                totalColumns.push({ row, col });
+            }
+        }
+    }
+
+    totalColumns.forEach(({ row: headerRow, col: totalCol }) => {
+        const baseCol = findBaseColumnForTotal(sheet, range, headerRow, totalCol);
+
+        for (let row = range.s.r; row <= range.e.r; row += 1) {
+            const label = normalizeSheetText(readCell(sheet, row, totalCol - 1));
+            const key = SHEET_STAT_LABELS[label];
+            const total = readNumberCell(sheet, row, totalCol);
+
+            if (key && total !== null && stats[key] == null) {
+                let base = total;
+                let bonus = 0;
+
+                if (baseCol !== null && SHEET_STAT_LABELS[normalizeSheetText(readCell(sheet, row, baseCol - 1))] === key) {
+                    const baseValue = readNumberCell(sheet, row, baseCol);
+
+                    if (baseValue !== null) {
+                        base = baseValue;
+                        bonus = total - base;
+                    }
+                }
+
+                stats[key] = { base, bonus, total };
+            }
+        }
+    });
+
+    return {
+        name: findCharacterName(sheet, range) || "무명",
+        stats
+    };
 }
 
 document.getElementById('excel-file').addEventListener('change', function (e) {
@@ -309,33 +457,23 @@ document.getElementById('excel-file').addEventListener('change', function (e) {
     reader.onload = function (e) {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-
-        const getV = (addr, def = 0) => {
-            const cell = sheet[addr];
-            return cell ? (cell.v || def) : def;
-        };
+        const imported = extractStatsFromWorkbook(workbook);
 
         const char = {
             id: Date.now(),
-            name: getV('C2', getV('C4', "무명")),
-            hp: getV('U4', getV('R4', 0)),
-            sta: getV('U5', getV('R5', 0)),
-            str: getV('U6', getV('R6', 0)),
-            hea: getV('U7', getV('R7', 0)),
-            spd: getV('U8', getV('R8', 0)),
-            pre: getV('U9', getV('R9', 0)),
-            int: getV('U10', getV('R10', 0)),
-            wis: getV('U11', getV('R11', 0)),
-            cha: getV('U12', getV('R12', 0)),
-            dmg: getV('U13', getV('R13', 0)),
-            dmgSub: getV('U14', getV('R14', 0)),
-            def: getV('U15', getV('R15', 0)),
+            name: imported.name,
+            bonus: {},
             pinned: false,
             hidden: false,
             order: Date.now(),
             mainOrder: Date.now()
         };
+
+        STAT_DEFS.forEach(stat => {
+            const importedStat = imported.stats[stat.key];
+            char[stat.key] = importedStat?.base ?? 0;
+            char.bonus[stat.key] = importedStat?.bonus ?? 0;
+        });
 
         savedCharacters.push(char);
         saveData();
@@ -538,5 +676,6 @@ function changeMainOrder(id, value) {
 }
 
 function saveData() {
+    savedCharacters = savedCharacters.map(sanitizeCharacter);
     localStorage.setItem('trpg_characters', JSON.stringify(savedCharacters));
 }
