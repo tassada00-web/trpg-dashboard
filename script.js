@@ -1,7 +1,7 @@
 // [script.js] 최종 통합 버전
 // 기능: 자동출력, 최신 10개 로그, 저장 목록, 메인 숨김, 로그 토글, 드래그 정렬, 순서 직접 입력
 
-const DEFAULT_WEBHOOK_URL = "https://discord.com/api/webhooks/1494322378564698152/Ywbob5pJ0zuOg199qDBayCLru8ZZDGlDM3dw2tvB56LW9Vkkja3X6HhdLz_E6yO4WYHs";
+const WEBHOOK_STORAGE_KEY = "trpg_discord_webhook_url";
 
 let lastRollData = null;
 let dragId = null;
@@ -27,6 +27,7 @@ let savedCharacters = (JSON.parse(localStorage.getItem('trpg_characters')) || []
 
 window.onload = function () {
     saveData();
+    restoreWebhookUrl();
     renderAll();
 };
 
@@ -151,6 +152,32 @@ function addLog(data) {
 
 function clearLog() {
     document.getElementById('dice-log-container').innerHTML = "";
+}
+
+function restoreWebhookUrl() {
+    const input = document.getElementById('webhook-url');
+    if (!input) return;
+
+    input.value = localStorage.getItem(WEBHOOK_STORAGE_KEY) || "";
+    input.addEventListener('change', () => saveWebhookUrl(input.value));
+    input.addEventListener('blur', () => saveWebhookUrl(input.value));
+}
+
+function saveWebhookUrl(value) {
+    const webhookUrl = value.trim();
+
+    if (webhookUrl) {
+        localStorage.setItem(WEBHOOK_STORAGE_KEY, webhookUrl);
+    } else {
+        localStorage.removeItem(WEBHOOK_STORAGE_KEY);
+    }
+}
+
+function getWebhookUrl() {
+    const input = document.getElementById('webhook-url');
+    const webhookUrl = input.value.trim();
+    saveWebhookUrl(webhookUrl);
+    return webhookUrl;
 }
 
 function resetCharacterInputs() {
@@ -347,8 +374,12 @@ function hideAllCharacters() {
 function confirmSend() {
     if (!lastRollData) return;
 
-    const inputUrl = document.getElementById('webhook-url').value;
-    const webhookUrl = inputUrl || DEFAULT_WEBHOOK_URL;
+    const webhookUrl = getWebhookUrl();
+
+    if (!webhookUrl) {
+        alert("Webhook URL을 입력해 주세요.");
+        return;
+    }
 
     fetch(webhookUrl, {
         method: 'POST',
@@ -357,6 +388,8 @@ function confirmSend() {
             content: `**[${lastRollData.charName}]** ${lastRollData.statName} 판정: **${lastRollData.result}** / ${lastRollData.maxVal}${lastRollData.bonus ? ` (${lastRollData.roll} ${formatSignedNumber(lastRollData.bonus)})` : ""}`,
             username: "GM Dashboard"
         })
+    }).catch(() => {
+        alert("디스코드 전송에 실패했습니다. Webhook URL을 다시 확인해 주세요.");
     });
 
     document.getElementById('output-btn').style.display = "none";
